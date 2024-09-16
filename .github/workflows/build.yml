@@ -55,30 +55,24 @@ jobs:
           else
             GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o oblivion-helper/oblivion-helper ./cmd
           fi
-      - name: List files in directory
-        run: |
-          ls -la oblivion-helper/
+    
       - name: Archive binaries
         run: |
-          for file in oblivion-helper/*; do
-            if [ -f "$file" ]; then
-              zip "${file}_${{ env.ASSET_NAME }}.zip" "$file"
-            else
-              echo "Warning: $file not found or is not a regular file."
-            fi
-          done
+          zip oblivion-helper-${{ matrix.goos }}-${{ matrix.goarch }}.zip oblivion-helper/oblivion*
+          
       - name: Upload binaries to Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: oblivion-helper_${{ env.ASSET_NAME }}
+          name: oblivion-helper-${{ matrix.goos }}-${{ matrix.goarch }}
           path: |
-            ./oblivion-helper/*.zip
+            ./*.zip
+            
       - name: Create GitHub release
         id: create_release
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            ./oblivion-helper/*.zip
+            ./*.zip
           tag_name: ${{ env.TAG_NAME }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
