@@ -1,0 +1,84 @@
+on:
+  push:
+    tags:
+      - 'v*'
+name: Go
+jobs:
+  build:
+    permissions:
+      contents: write
+      id-token: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - goos: darwin
+            goarch: amd64
+          - goos: darwin
+            goarch: arm64
+          - goos: linux
+            goarch: amd64
+          - goos: linux
+            goarch: arm64
+          - goos: windows
+            goarch: amd64
+          - goos: windows
+            goarch: arm64
+          - goos: windows
+            goarch: 386
+    runs-on: ubuntu-latest
+    env:
+      GOOS: ${{ matrix.goos }}
+      GOARCH: ${{ matrix.goarch }}
+      GOARM: ${{ matrix.goarm }}
+      GOMIPS: ${{ matrix.gomips }}
+      CGO_ENABLED: 0
+    steps:
+      - name: Checkout codebase
+        uses: actions/checkout@v4
+      - name: Show workflow information
+        run: |
+          export _NAME=$GOOS-$GOARCH$GOARM$GOMIPS
+          echo "GOOS: $GOOS, GOARCH: $GOARCH, GOARM: $GOARM, GOMIPS: $GOMIPS, RELEASE_NAME: $_NAME"
+          echo "ASSET_NAME=$_NAME" >> $GITHUB_ENV
+          echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22.6'
+          check-latest: true
+      - name: Build for ${{ matrix.goos }}-${{ matrix.goarch }}
+        run: |
+          mkdir -p oblivion-helper
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o oblivion-helper/oblivion-helper.exe ./cmd
+          else
+            GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o oblivion-helper/oblivion-helper ./cmd
+          fi
+      - name: List files in directory
+        run: |
+          ls -la oblivion-helper/
+      - name: Archive binaries
+        run: |
+          for file in oblivion-helper/*; do
+            if [ -f "$file" ]; then
+              zip "${file}_${{ env.ASSET_NAME }}.zip" "$file"
+            else
+              echo "Warning: $file not found or is not a regular file."
+            fi
+          done
+      - name: Upload binaries to Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: oblivion-helper_${{ env.ASSET_NAME }}
+          path: |
+            ./oblivion-helper/*.zip
+      - name: Create GitHub release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            ./oblivion-helper/*.zip
+          tag_name: ${{ env.TAG_NAME }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
