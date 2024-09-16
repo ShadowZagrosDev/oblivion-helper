@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"runtime"
 	"strings"
 	"syscall"
 	"time"
@@ -32,28 +33,43 @@ func startSingBox() {
 
 func stopSingBox() {
 	if singBoxProcess != nil {
-		err := singBoxProcess.Process.Signal(syscall.SIGTERM)
-		if err != nil {
-			fmt.Printf("Failed to send termination signal: %v\n", err)
-			return
-		}
-
-		done := make(chan error, 1)
-		go func() {
-			done <- singBoxProcess.Wait()
-		}()
-
-		select {
-		case <-time.After(5 * time.Second):
-			if err := singBoxProcess.Process.Kill(); err != nil {
-				fmt.Printf("Failed to kill process: %v\n", err)
-			}
-			fmt.Println("Sing-Box was forcefully stopped.")
-		case err := <-done:
+		var err error
+		if runtime.GOOS == "windows" {
+			err = singBoxProcess.Process.Kill()
 			if err != nil {
-				fmt.Printf("Process exited with error: %v\n", err)
+				fmt.Printf("Failed to kill process on Windows: %v\n", err)
 			} else {
-				fmt.Println("Sing-Box stopped gracefully.")
+				fmt.Println("Sing-Box was stopped on Windows.")
+			}
+		} else {
+			err = singBoxProcess.Process.Signal(syscall.SIGTERM)
+			if err != nil {
+				fmt.Printf("Failed to send termination signal: %v\n", err)
+				if killErr := singBoxProcess.Process.Kill(); killErr != nil {
+					fmt.Printf("Failed to kill process: %v\n", killErr)
+				} else {
+					fmt.Println("Sing-Box was forcefully stopped.")
+				}
+			} else {
+				done := make(chan error, 1)
+				go func() {
+					done <- singBoxProcess.Wait()
+				}()
+
+				select {
+				case <-time.After(5 * time.Second):
+					if killErr := singBoxProcess.Process.Kill(); killErr != nil {
+						fmt.Printf("Failed to kill process after timeout: %v\n", killErr)
+					} else {
+						fmt.Println("Sing-Box was forcefully stopped after timeout.")
+					}
+				case err := <-done:
+					if err != nil {
+						fmt.Printf("Process exited with error: %v\n", err)
+					} else {
+						fmt.Println("Sing-Box stopped gracefully.")
+					}
+				}
 			}
 		}
 
