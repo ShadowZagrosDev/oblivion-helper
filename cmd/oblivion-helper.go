@@ -164,9 +164,9 @@ func main() {
 
 	// Set the correct binary path based on the OS
 	if runtime.GOOS == "windows" {
-		manager.binFile = filepath.Join(execDir, "sing-box.exe")
+		manager.binFile = filepath.Join(execDir, "oblivion-sing-box.exe")
 	} else {
-		manager.binFile = filepath.Join(execDir, "sing-box")
+		manager.binFile = filepath.Join(execDir, "oblivion-sing-box")
 	}
 
 	fmt.Println("Oblivion helper started. Waiting for commands...")
