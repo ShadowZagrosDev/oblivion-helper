@@ -250,6 +250,54 @@ func (m *SingBoxManager) watchCommandFile(commandChan chan<- string) {
 	}
 }
 
+func (m *SingBoxManager) shouldKillWarpPlus() bool {
+	if !m.isProcessRunning("warp-plus") {
+		return false
+	}
+
+	execDir, err := getExecutableDir()
+	if err != nil {
+		return false
+	}
+
+	settingsFile:= filepath.Join(execDir, "settings.json")
+
+	content, err := os.ReadFile(settingsFile)
+	if err != nil {
+		return false
+	}
+
+	if strings.Contains(string(content), `"proxyMode":"tun"`) {
+		log.Println("Proxy mode is set to TUN and warp-plus is running. Proceeding to kill warp-plus.")
+		return true
+	}
+
+	return false
+}
+
+func (m *SingBoxManager) killWarpPlus() error {
+	var cmd *exec.Cmd
+
+	switch runtime.GOOS {
+	case "windows":
+		cmd = exec.Command("taskkill", "/F", "/IM", fmt.Sprintf("%s.exe", m.config.WpBin))
+	case "darwin", "linux":
+		cmd = exec.Command("pkill", m.config.WpBin)
+	default:
+		log.Printf("Unsupported operating system: %s\n", runtime.GOOS)
+		return fmt.Errorf("unsupported OS: %s", runtime.GOOS)
+	}
+
+	if err := cmd.Run(); err != nil {
+		log.Printf("Failed to kill warp-plus process: %v\n", err)
+		return err
+	}
+
+	log.Println("Warp-Plus process killed successfully.")
+	return nil
+}
+
+
 func (m *SingBoxManager) handleExit() {
 	if err := m.stopSingBox(); err != nil {
 		log.Printf("Error stopping Sing-Box during exit: %v\n", err)
@@ -278,6 +326,11 @@ func main() {
 	go func() {
 		<-sigChan
 		log.Println("Exiting by user request.")
+		if manager.shouldKillWarpPlus() {
+			if err := manager.killWarpPlus(); err != nil {
+				log.Printf("Error killing warp-plus during exit: %v\n", err)
+			}
+		}
 		manager.handleExit()
 	}()
 
