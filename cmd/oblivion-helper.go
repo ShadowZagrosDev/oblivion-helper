@@ -68,7 +68,6 @@ func (m *SingBoxManager) loadConfig() error {
 	if err != nil {
 		return fmt.Errorf("failed to read config file: %w", err)
 	}
-
 	return json.Unmarshal(byteValue, &m.config)
 }
 
@@ -96,12 +95,12 @@ func (m *SingBoxManager) startSingBox() {
 	}
 	logMessage(InfoLevel, "startSingBox", "Sing-Box started")
 
-	go m.monitorProcess(m.config.SbBin, m.handleSingBoxExit)
+	go m.monitorProcess(m.config.SbBin, m.monitorSingBox)
 	if m.config.MonitorWp {
-		go m.monitorProcess(m.config.WpBin, m.handleWarpPlusExit)
+		go m.monitorProcess(m.config.WpBin, m.monitorWarpPlus)
 	}
 	if m.config.MonitorOb {
-		go m.monitorProcess(m.config.ObBin, m.handleOblivionExit)
+		go m.monitorProcess(m.config.ObBin, m.monitorOblivionHelper)
 	}
 }
 
@@ -147,45 +146,44 @@ func (m *SingBoxManager) monitorProcess(processName string, callback func()) {
 
 	for range ticker.C {
 		if !m.isProcessRunning(processName) {
-			logMessage(WarningLevel, "monitorProcess", fmt.Sprintf("Process %s not found", processName))
 			callback()
 			return
 		}
 	}
 }
 
-func (m *SingBoxManager) handleSingBoxExit() {
+func (m *SingBoxManager) monitorSingBox() {
 	if m.isProcessRunning(m.config.WpBin) {
-		logMessage(WarningLevel, "handleSingBoxExit", "Sing-Box process not found. Stopping Warp-Plus...")
+		logMessage(WarningLevel, "monitorSingBox", "Sing-Box process not found. Stopping Warp-Plus...")
 		m.killWarpPlus()
 	}
 	m.singBoxProcess = nil
 }
 
-func (m *SingBoxManager) handleWarpPlusExit() {
+func (m *SingBoxManager) monitorWarpPlus() {
 	if m.isProcessRunning(m.config.SbBin) {
-		logMessage(WarningLevel, "handleWarpPlusExit", "Warp-Plus process not found. Stopping Sing-Box...")
+		logMessage(WarningLevel, "monitorWarpPlus", "Warp-Plus process not found. Stopping Sing-Box...")
 		m.stopSingBox()
 	}
 }
 
-func (m *SingBoxManager) handleOblivionExit() {
-	logMessage(WarningLevel, "handleOblivionExit", "Oblivion-Desktop process not found. Stopping Oblivion-Helper...")
+func (m *SingBoxManager) monitorOblivionHelper() {
+	logMessage(WarningLevel, "monitorOblivionHelper", "Oblivion-Desktop process not found. Stopping Oblivion-Helper...")
 	m.handleExit()
 }
 
 func (m *SingBoxManager) processCommand(command string) {
 	logMessage(InfoLevel, "processCommand", fmt.Sprintf("Processing command: %s", command))
-    switch command {
-    case "start":
-        m.startSingBox()
-    case "stop":
-        m.stopSingBox()
-    case "exit":
-        m.handleExit()
-    default:
-        logMessage(WarningLevel, "processCommand", fmt.Sprintf("Unknown command: %s", command))
-    }
+	switch command {
+	case "start":
+		m.startSingBox()
+	case "stop":
+		m.stopSingBox()
+	case "exit":
+		m.handleExit()
+	default:
+		logMessage(WarningLevel, "processCommand", fmt.Sprintf("Unknown command: %s", command))
+	}
 }
 
 func (m *SingBoxManager) watchCommandFile(commandChan chan<- string) {
@@ -256,7 +254,7 @@ func (m *SingBoxManager) killWarpPlus() {
 	}
 
 	if err := cmd.Run(); err != nil {
-		logMessage(ErrorLevel, "killWarpPlus", fmt.Sprintf("Failed to kill warp-plus process: %v", err))
+		logMessage(ErrorLevel, "killWarpPlus", fmt.Sprintf("Failed to kill Warp-Plus process: %v", err))
 		return
 	}
 
