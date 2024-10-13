@@ -16,13 +16,19 @@ import (
 	"time"
 )
 
+const (
+	InfoLevel    = "INFO"
+	WarningLevel = "WARNING"
+	ErrorLevel   = "ERROR"
+)
+
 type Config struct {
-	SbConfig   string `json:"sbConfig"`
-	SbBin      string `json:"sbBin"`
-	WpBin      string `json:"wpBin"`
-	ObBin      string `json:"obBin"`
-	MonitorWp  bool   `json:"monitorWp"`
-	MonitorOb  bool   `json:"monitorOb"`
+	SbConfig  string `json:"sbConfig"`
+	SbBin     string `json:"sbBin"`
+	WpBin     string `json:"wpBin"`
+	ObBin     string `json:"obBin"`
+	MonitorWp bool   `json:"monitorWp"`
+	MonitorOb bool   `json:"monitorOb"`
 }
 
 type SingBoxManager struct {
@@ -31,17 +37,22 @@ type SingBoxManager struct {
 	commandFile    string
 	singBoxProcess *exec.Cmd
 	mu             sync.Mutex
+	dirPath        string
+}
+
+func logMessage(level, function, message string) {
+	log.Printf("[%s] %s: %s\n", level, function, message)
 }
 
 func init() {
-	logFile, err := os.OpenFile("oblivion-helper.log", os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0666)
+	logFile, err := os.OpenFile("oblivion-helper.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err != nil {
 		fmt.Printf("Error initializing log file: %v\n", err)
 		os.Exit(1)
 	}
 	log.SetOutput(logFile)
 	log.SetFlags(log.Ldate | log.Ltime)
-	log.Println("Logging initialized.")
+	logMessage(InfoLevel, "init", "-----------< Logging started >-----------")
 }
 
 func getExecutableDir() (string, error) {
@@ -53,104 +64,64 @@ func getExecutableDir() (string, error) {
 }
 
 func (m *SingBoxManager) loadConfig() error {
-	execDir, err := getExecutableDir()
-	if err != nil {
-		return fmt.Errorf("failed to get executable directory: %w", err)
-	}
-
 	byteValue, err := os.ReadFile(m.configFile)
 	if err != nil {
 		return fmt.Errorf("failed to read config file: %w", err)
 	}
 
-	if err := json.Unmarshal(byteValue, &m.config); err != nil {
-		return fmt.Errorf("failed to unmarshal config: %w", err)
-	}
-
-	if !filepath.IsAbs(m.config.SbBin) {
-		m.config.SbBin = filepath.Join(execDir, m.config.SbBin)
-	}
-	if !filepath.IsAbs(m.config.SbConfig) {
-		m.config.SbConfig = filepath.Join(execDir, m.config.SbConfig)
-	}
-
-	return nil
+	return json.Unmarshal(byteValue, &m.config)
 }
 
-func (m *SingBoxManager) startSingBox() error {
+func (m *SingBoxManager) startSingBox() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	if m.singBoxProcess != nil && m.singBoxProcess.ProcessState == nil {
-		log.Println("Sing-Box is already running.")
-		return nil
+	if m.singBoxProcess != nil {
+		logMessage(WarningLevel, "startSingBox", "Sing-Box is already running")
+		return
 	}
 
 	if err := m.loadConfig(); err != nil {
-		log.Printf("failed to load config: %v\n", err)
-		return nil
+		logMessage(ErrorLevel, "startSingBox", fmt.Sprintf("Failed to load config: %v", err))
+		return
 	}
 
-	m.singBoxProcess = exec.Command(m.config.SbBin, "run", "-c", m.config.SbConfig)
+	sbBinFullPath := filepath.Join(m.dirPath, m.config.SbBin)
+	sbConfigFullPath := filepath.Join(m.dirPath, m.config.SbConfig)
+
+	m.singBoxProcess = exec.Command(sbBinFullPath, "run", "-c", sbConfigFullPath)
 	if err := m.singBoxProcess.Start(); err != nil {
-		return fmt.Errorf("failed to start Sing-Box: %w", err)
+		logMessage(ErrorLevel, "startSingBox", fmt.Sprintf("Failed to start Sing-Box: %v", err))
+		return
 	}
-	log.Println("Sing-Box started.")
+	logMessage(InfoLevel, "startSingBox", "Sing-Box started")
 
+	go m.monitorProcess(m.config.SbBin, m.handleSingBoxExit)
 	if m.config.MonitorWp {
-		go m.monitorProcess(m.config.WpBin, func() {
-			log.Println("Warp-Plus process not found. Stopping Sing-Box...")
-			if err := m.stopSingBox(); err != nil {
-				log.Printf("Error stopping Sing-Box: %v\n", err)
-			}
-		})
+		go m.monitorProcess(m.config.WpBin, m.handleWarpPlusExit)
 	}
-
 	if m.config.MonitorOb {
-		go m.monitorProcess(m.config.ObBin, func() {
-			log.Println("Oblivion-Desktop process not found. Stopping Oblivion-Helper...")
-			m.handleExit()
-		})
+		go m.monitorProcess(m.config.ObBin, m.handleOblivionExit)
 	}
-
-	return nil
 }
 
-func (m *SingBoxManager) stopSingBox() error {
+func (m *SingBoxManager) stopSingBox() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	if m.singBoxProcess == nil {
-		log.Println("No Sing-Box process to stop.")
-		return nil
+		logMessage(WarningLevel, "stopSingBox", "No Sing-Box process to stop")
+		return
 	}
 
-	var err error
-	if runtime.GOOS == "windows" {
-		err = m.singBoxProcess.Process.Kill()
-	} else {
-		err = m.singBoxProcess.Process.Signal(syscall.SIGTERM)
-		if err == nil {
-			done := make(chan error, 1)
-			go func() {
-				done <- m.singBoxProcess.Wait()
-			}()
-
-			select {
-			case <-time.After(5 * time.Second):
-				err = m.singBoxProcess.Process.Kill()
-			case err = <-done:
-			}
-		}
-	}
-
+	err := m.singBoxProcess.Process.Kill()
 	if err != nil {
-		return fmt.Errorf("failed to stop Sing-Box: %w", err)
+		logMessage(ErrorLevel, "stopSingBox", fmt.Sprintf("Failed to stop Sing-Box: %v", err))
+		return
 	}
 
-	log.Println("Sing-Box stopped.")
+	logMessage(InfoLevel, "stopSingBox", "Sing-Box stopped")
 	m.singBoxProcess = nil
-	return nil
 }
 
 func (m *SingBoxManager) isProcessRunning(processName string) bool {
@@ -162,7 +133,7 @@ func (m *SingBoxManager) isProcessRunning(processName string) bool {
 	case "darwin", "linux":
 		cmd = exec.Command("pgrep", processName)
 	default:
-		log.Printf("Unsupported operating system: %s\n", runtime.GOOS)
+		logMessage(WarningLevel, "isProcessRunning", fmt.Sprintf("Unsupported operating system: %s", runtime.GOOS))
 		return false
 	}
 
@@ -170,16 +141,70 @@ func (m *SingBoxManager) isProcessRunning(processName string) bool {
 	return err == nil && len(output) > 0
 }
 
-func (m *SingBoxManager) monitorProcess(processName string, stopCallback func()) {
+func (m *SingBoxManager) monitorProcess(processName string, callback func()) {
 	ticker := time.NewTicker(3 * time.Second)
 	defer ticker.Stop()
 
-	for {
-		select {
-		case <-ticker.C:
-			if !m.isProcessRunning(processName) {
-				stopCallback()
-				return
+	for range ticker.C {
+		if !m.isProcessRunning(processName) {
+			logMessage(WarningLevel, "monitorProcess", fmt.Sprintf("Process %s not found", processName))
+			callback()
+			return
+		}
+	}
+}
+
+func (m *SingBoxManager) handleSingBoxExit() {
+	if m.isProcessRunning(m.config.WpBin) {
+		logMessage(WarningLevel, "handleSingBoxExit", "Sing-Box process not found. Stopping Warp-Plus...")
+		m.killWarpPlus()
+	}
+	m.singBoxProcess = nil
+}
+
+func (m *SingBoxManager) handleWarpPlusExit() {
+	if m.isProcessRunning(m.config.SbBin) {
+		logMessage(WarningLevel, "handleWarpPlusExit", "Warp-Plus process not found. Stopping Sing-Box...")
+		m.stopSingBox()
+	}
+}
+
+func (m *SingBoxManager) handleOblivionExit() {
+	logMessage(WarningLevel, "handleOblivionExit", "Oblivion-Desktop process not found. Stopping Oblivion-Helper...")
+	m.handleExit()
+}
+
+func (m *SingBoxManager) processCommand(command string) {
+	logMessage(InfoLevel, "processCommand", fmt.Sprintf("Processing command: %s", command))
+    switch command {
+    case "start":
+        m.startSingBox()
+    case "stop":
+        m.stopSingBox()
+    case "exit":
+        m.handleExit()
+    default:
+        logMessage(WarningLevel, "processCommand", fmt.Sprintf("Unknown command: %s", command))
+    }
+}
+
+func (m *SingBoxManager) watchCommandFile(commandChan chan<- string) {
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+
+	var lastModTime time.Time
+	for range ticker.C {
+		fileInfo, err := os.Stat(m.commandFile)
+		if err != nil {
+			if !os.IsNotExist(err) {
+				logMessage(ErrorLevel, "watchCommandFile", fmt.Sprintf("Error getting file info: %v", err))
+			}
+			continue
+		}
+		if fileInfo.ModTime().After(lastModTime) {
+			if command, err := m.readCommandFromFile(); err == nil && command != "" {
+				commandChan <- command
+				lastModTime = fileInfo.ModTime()
 			}
 		}
 	}
@@ -202,80 +227,22 @@ func (m *SingBoxManager) readCommandFromFile() (string, error) {
 	return "", scanner.Err()
 }
 
-func (m *SingBoxManager) processCommand(command string) {
-	switch command {
-	case "start":
-		if err := m.startSingBox(); err != nil {
-			log.Printf("Error starting Sing-Box: %v\n", err)
-		}
-	case "stop":
-		if err := m.stopSingBox(); err != nil {
-			log.Printf("Error stopping Sing-Box: %v\n", err)
-		}
-	case "exit":
-		m.handleExit()
-	default:
-		log.Printf("Unknown command: %s\n", command)
-	}
-}
-
-func (m *SingBoxManager) watchCommandFile(commandChan chan<- string) {
-	ticker := time.NewTicker(time.Second)
-	defer ticker.Stop()
-
-	var lastModTime time.Time
-	for {
-		select {
-		case <-ticker.C:
-			fileInfo, err := os.Stat(m.commandFile)
-			if err != nil {
-				if os.IsNotExist(err) {
-					continue
-				}
-				log.Printf("Error getting file info: %v\n", err)
-				continue
-			}
-			if fileInfo.ModTime().After(lastModTime) {
-				command, err := m.readCommandFromFile()
-				if err != nil {
-					log.Printf("Error reading command: %v\n", err)
-					continue
-				}
-				if command != "" {
-					commandChan <- command
-					lastModTime = fileInfo.ModTime()
-				}
-			}
-		}
-	}
-}
-
 func (m *SingBoxManager) shouldKillWarpPlus() bool {
-	if !m.isProcessRunning("warp-plus") {
+	if !m.isProcessRunning(m.config.WpBin) {
 		return false
 	}
 
-	execDir, err := getExecutableDir()
-	if err != nil {
-		return false
-	}
-
-	settingsFile:= filepath.Join(execDir, "settings.json")
-
+	settingsFile := filepath.Join(m.dirPath, "settings.json")
 	content, err := os.ReadFile(settingsFile)
 	if err != nil {
+		logMessage(ErrorLevel, "shouldKillWarpPlus", fmt.Sprintf("Error reading settings.json: %v", err))
 		return false
 	}
 
-	if strings.Contains(string(content), `"proxyMode":"tun"`) {
-		log.Println("Proxy mode is set to TUN and warp-plus is running. Proceeding to kill warp-plus.")
-		return true
-	}
-
-	return false
+	return strings.Contains(string(content), `"proxyMode":"tun"`)
 }
 
-func (m *SingBoxManager) killWarpPlus() error {
+func (m *SingBoxManager) killWarpPlus() {
 	var cmd *exec.Cmd
 
 	switch runtime.GOOS {
@@ -284,53 +251,50 @@ func (m *SingBoxManager) killWarpPlus() error {
 	case "darwin", "linux":
 		cmd = exec.Command("pkill", m.config.WpBin)
 	default:
-		log.Printf("Unsupported operating system: %s\n", runtime.GOOS)
-		return fmt.Errorf("unsupported OS: %s", runtime.GOOS)
+		logMessage(ErrorLevel, "killWarpPlus", fmt.Sprintf("Unsupported OS: %s", runtime.GOOS))
+		return
 	}
 
 	if err := cmd.Run(); err != nil {
-		log.Printf("Failed to kill warp-plus process: %v\n", err)
-		return err
+		logMessage(ErrorLevel, "killWarpPlus", fmt.Sprintf("Failed to kill warp-plus process: %v", err))
+		return
 	}
 
-	log.Println("Warp-Plus process killed successfully.")
-	return nil
+	logMessage(InfoLevel, "killWarpPlus", "Warp-Plus process killed successfully")
 }
 
-
 func (m *SingBoxManager) handleExit() {
-	if err := m.stopSingBox(); err != nil {
-		log.Printf("Error stopping Sing-Box during exit: %v\n", err)
+	if m.isProcessRunning(m.config.SbBin) {
+        m.stopSingBox()
+    }
+	if m.shouldKillWarpPlus() {
+		m.killWarpPlus()
 	}
-	log.Println("Exiting helper.")
+	logMessage(InfoLevel, "handleExit", "Exiting helper")
 	os.Exit(0)
 }
 
 func main() {
 	execDir, err := getExecutableDir()
 	if err != nil {
-		log.Println(err)
-		return
+		logMessage(ErrorLevel, "main", fmt.Sprintf("Failed to get executable directory: %v", err))
+		os.Exit(0)
 	}
 
 	manager := &SingBoxManager{
 		commandFile: filepath.Join(execDir, "cmd.obv"),
 		configFile:  filepath.Join(execDir, "config.obv"),
+		dirPath:     execDir,
 	}
 
-	log.Println("Oblivion helper started. Waiting for commands...")
+	logMessage(InfoLevel, "main", "Oblivion helper started. Waiting for commands...")
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 
 	go func() {
 		<-sigChan
-		log.Println("Exiting by user request.")
-		if manager.shouldKillWarpPlus() {
-			if err := manager.killWarpPlus(); err != nil {
-				log.Printf("Error killing warp-plus during exit: %v\n", err)
-			}
-		}
+		logMessage(WarningLevel, "main", "Exiting by an interrupt")
 		manager.handleExit()
 	}()
 
