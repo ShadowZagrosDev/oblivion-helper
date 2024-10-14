@@ -131,7 +131,7 @@ func (m *SingBoxManager) isProcessRunning(processName string) bool {
 	case "windows":
 		cmd = exec.Command("powershell", "-Command", fmt.Sprintf("Get-Process -Name %s -ErrorAction SilentlyContinue", processName))
 	case "darwin", "linux":
-		cmd = exec.Command("pgrep", processName)
+		cmd = exec.Command("pgrep", "-f", processName)
 	default:
 		logMessage(WarningLevel, "isProcessRunning", fmt.Sprintf("Unsupported operating system: %s", runtime.GOOS))
 		return false
