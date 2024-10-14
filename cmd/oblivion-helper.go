@@ -125,6 +125,7 @@ func (m *SingBoxManager) stopSingBox() {
 
 func (m *SingBoxManager) isProcessRunning(processName string) bool {
 	var cmd *exec.Cmd
+	processName = strings.TrimSuffix(processName, filepath.Ext(processName))
 
 	switch runtime.GOOS {
 	case "windows":
