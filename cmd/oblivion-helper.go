@@ -286,6 +286,7 @@ func main() {
 		dirPath:     execDir,
 	}
 
+	fmt.Println("Oblivion helper started. Waiting for commands...")
 	logMessage(InfoLevel, "main", "Oblivion helper started. Waiting for commands...")
 
 	sigChan := make(chan os.Signal, 1)
