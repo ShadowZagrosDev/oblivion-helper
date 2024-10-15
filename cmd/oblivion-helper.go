@@ -14,6 +14,8 @@ import (
 	"sync"
 	"syscall"
 	"time"
+	
+	"github.com/shirou/gopsutil/process"
 )
 
 const (
@@ -124,21 +126,33 @@ func (m *SingBoxManager) stopSingBox() {
 }
 
 func (m *SingBoxManager) isProcessRunning(processName string) bool {
-	var cmd *exec.Cmd
-	processName = strings.TrimSuffix(processName, filepath.Ext(processName))
-
 	switch runtime.GOOS {
 	case "windows":
-		cmd = exec.Command("powershell", "-Command", fmt.Sprintf("Get-Process -Name %s -ErrorAction SilentlyContinue", processName))
+		processes, err := process.Processes()
+		if err != nil {
+			logMessage(ErrorLevel, "isProcessRunning", fmt.Sprintf("Failed to get processes: %v", err))
+			return false
+		}
+	
+		for _, process := range processes {
+			name, err := process.Name()
+			if err != nil {
+				continue
+			}
+			if name == processName {
+				return true
+			}
+		}
+		return false
 	case "darwin", "linux":
+		var cmd *exec.Cmd
 		cmd = exec.Command("pgrep", "-f", processName)
+		output, err := cmd.Output()
+		return err == nil && len(output) > 0
 	default:
 		logMessage(WarningLevel, "isProcessRunning", fmt.Sprintf("Unsupported operating system: %s", runtime.GOOS))
 		return false
 	}
-
-	output, err := cmd.Output()
-	return err == nil && len(output) > 0
 }
 
 func (m *SingBoxManager) monitorProcess(processName string, callback func()) {
