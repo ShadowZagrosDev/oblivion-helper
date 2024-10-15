@@ -260,7 +260,7 @@ func (m *SingBoxManager) killWarpPlus() {
 
 	switch runtime.GOOS {
 	case "windows":
-		cmd = exec.Command("taskkill", "/F", "/IM", fmt.Sprintf("%s.exe", m.config.WpBin))
+		cmd = exec.Command("taskkill", "/F", "/IM", m.config.WpBin)
 	case "darwin", "linux":
 		cmd = exec.Command("pkill", m.config.WpBin)
 	default:
