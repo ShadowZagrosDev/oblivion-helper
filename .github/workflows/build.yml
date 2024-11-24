@@ -52,7 +52,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          go mod init github.com/ShadowZagrosDev/oblivion-helper
+          go mod init oblivion-helper
           go mod tidy
 
       - name: Create gRPC directory
