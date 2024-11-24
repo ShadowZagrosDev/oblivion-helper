@@ -14,7 +14,7 @@ import (
 	"syscall"
 	"time"
 
-	pb "github.com/ShadowZagrosDev/oblivion-helper/gRPC"
+	pb "oblivion-helper/gRPC"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
