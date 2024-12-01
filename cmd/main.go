@@ -207,7 +207,7 @@ func main() {
 		log.Fatalf("Failed to create server: %v", err)
 	}
 
-	lis, err := net.Listen("tcp", defaultPort)
+	lis, err := net.Listen("tcp", "127.0.0.1"+defaultPort)
 	if err != nil {
 		log.Fatalf("Failed to listen: %v", err)
 	}
