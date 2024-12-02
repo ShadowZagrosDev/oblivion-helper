@@ -53,6 +53,7 @@ jobs:
       - name: Install dependencies
         run: |
           go mod init oblivion-helper
+          go get atomicgo.dev/isadmin
           go mod tidy
 
       - name: Create gRPC directory
