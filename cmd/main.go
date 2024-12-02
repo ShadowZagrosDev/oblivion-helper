@@ -18,6 +18,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"atomicgo.dev/isadmin"
 )
 
 const (
@@ -202,6 +203,12 @@ func (s *Server) broadcastStatus(status string) {
 }
 
 func main() {
+	if !isadmin.Check() {
+		fmt.Println("Oblivion-Helper must be run as an administrator/root.")
+		time.Sleep(3 * time.Second)
+		os.Exit(1)
+	}
+	
 	server, err := NewServer()
 	if err != nil {
 		log.Fatalf("Failed to create server: %v", err)
