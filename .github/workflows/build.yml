@@ -48,7 +48,6 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: '1.23.2'
-          check-latest: true
 
       - name: Install dependencies
         run: |
@@ -79,10 +78,11 @@ jobs:
         run: |
           mkdir -p oblivion-helper
           if [ "${{ matrix.goos }}" = "windows" ]; then
-            GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o oblivion-helper/oblivion-helper.exe ./cmd
+            GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -ldflags "-X 'main.Version=${{ env.TAG_NAME }}'" -o oblivion-helper/oblivion-helper.exe ./cmd
           else
-            GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o oblivion-helper/oblivion-helper ./cmd
+            GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -ldflags "-X 'main.Version=${{ env.TAG_NAME }}'" -o oblivion-helper/oblivion-helper ./cmd
           fi
+
 
       - name: Archive binaries
         run: |
