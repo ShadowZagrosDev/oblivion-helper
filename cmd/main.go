@@ -206,9 +206,13 @@ func (s *Server) broadcastStatus(status string) {
 }
 
 func main() {
-	if len(os.Args) > 1 && os.Args[1] == "version" {
-		fmt.Printf("Oblivion-Helper Version: %s\n", Version)
-		fmt.Printf("Environment: %s %s/%s\n", runtime.Version(), runtime.GOOS, runtime.GOARCH)
+	if len(os.Args) > 1 {
+		if(os.Args[1] == "version") {
+			fmt.Printf("Oblivion-Helper Version: %s\n", Version)
+			fmt.Printf("Environment: %s %s/%s\n", runtime.Version(), runtime.GOOS, runtime.GOARCH)
+		} else {
+			fmt.Println("Unknown switch. Use 'version' to display version information.");
+		}
 		os.Exit(0)
 	}
 	
