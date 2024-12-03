@@ -116,13 +116,12 @@ func (s *Server) monitorProcess() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if err != nil {
+	if err != nil && (s.running || s.sbProcess != nil) {
 		log.Printf("Sing-Box exited unexpectedly: %v", err)
+		s.running = false
+		s.sbProcess = nil
+		s.broadcastStatus("stopped")
 	}
-
-	s.running = false
-	s.sbProcess = nil
-	s.broadcastStatus("stopped")
 }
 
 func (s *Server) Stop(ctx context.Context, req *pb.StopRequest) (*pb.StopResponse, error) {
@@ -207,11 +206,12 @@ func (s *Server) broadcastStatus(status string) {
 
 func main() {
 	if len(os.Args) > 1 {
-		if(os.Args[1] == "version") {
+		switch os.Args[1] {
+		case "version":
 			fmt.Printf("Oblivion-Helper Version: %s\n", Version)
 			fmt.Printf("Environment: %s %s/%s\n", runtime.Version(), runtime.GOOS, runtime.GOARCH)
-		} else {
-			fmt.Println("Unknown switch. Use 'version' to display version information.");
+		default:
+			fmt.Printf("Unknown command '%s'. Use 'version' to display version information.\n", os.Args[1])
 		}
 		os.Exit(0)
 	}
