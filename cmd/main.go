@@ -13,6 +13,7 @@ import (
 	"sync"
 	"syscall"
 	"time"
+	"runtime"
 
 	pb "oblivion-helper/gRPC"
 	"google.golang.org/grpc"
@@ -20,6 +21,8 @@ import (
 	"google.golang.org/grpc/status"
 	"atomicgo.dev/isadmin"
 )
+
+var Version = "dev"
 
 const (
 	defaultPort    = ":50051"
@@ -203,6 +206,12 @@ func (s *Server) broadcastStatus(status string) {
 }
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "version" {
+		fmt.Printf("Oblivion-Helper Version: %s\n", Version)
+		fmt.Printf("Environment: %s %s/%s\n", runtime.Version(), runtime.GOOS, runtime.GOARCH)
+		os.Exit(0)
+	}
+	
 	if !isadmin.Check() {
 		fmt.Println("Oblivion-Helper must be run as an administrator/root.")
 		time.Sleep(3 * time.Second)
