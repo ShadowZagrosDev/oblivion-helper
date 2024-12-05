@@ -150,11 +150,12 @@ func (s *Server) startSingBox() error {
 	s.logger.info.Println("Sing-Box started")
 
 	// Monitor the process in a separate goroutine
-	go s.monitorProcess()
+	//go s.monitorProcess()
 	return nil
 }
 
 // monitorProcess monitors the Sing-Box process for termination
+/*
 func (s *Server) monitorProcess() {
 	s.logger.info.Println("Monitoring Sing-Box process...")
 	err := s.sbProcess.Wait()
@@ -170,6 +171,7 @@ func (s *Server) monitorProcess() {
 		s.broadcastStatus("terminated")
 	}
 }
+*/
 
 // stopSingBox stops the Sing-Box process
 func (s *Server) stopSingBox() error {
