@@ -15,21 +15,21 @@ import (
 	"syscall"
 	"time"
 
-	"atomicgo.dev/isadmin" 			 // Checks if the program is run with administrative privileges
-	"github.com/fatih/color" 		 // Adds color to log messages
-	"google.golang.org/grpc"		 // gRPC framework
-	"google.golang.org/grpc/codes"   	 // gRPC error codes
-	"google.golang.org/grpc/status"  	 // gRPC status handling
-	pb "oblivion-helper/gRPC" 		 // Generated protobuf code for the gRPC service
+	"atomicgo.dev/isadmin"          // Checks if the program is run with administrative privileges
+	"github.com/fatih/color"        // Adds color to log messages
+	"google.golang.org/grpc"        // gRPC framework
+	"google.golang.org/grpc/codes"  // gRPC error codes
+	"google.golang.org/grpc/status" // gRPC status handling
+	pb "oblivion-helper/gRPC"       // Generated protobuf code for the gRPC service
 )
 
 // Constants for server setup and configuration
 const (
-	protocolType       = "tcp"                 // Connection protocol used by the server
-	serverAddress      = "127.0.0.1:50051"     // Localhost address for gRPC server
-	configFileName     = "config.obv"          // Name of the configuration file
-	statusChannelCap   = 100                   // Capacity of the status channel
-	gracefulShutdownTimeout = 3 * time.Second  // Timeout for graceful shutdown
+	protocolType            = "tcp"             // Connection protocol used by the server
+	serverAddress           = "127.0.0.1:50051" // Localhost address for gRPC server
+	configFileName          = "config.obv"      // Name of the configuration file
+	statusChannelCap        = 100               // Capacity of the status channel
+	gracefulShutdownTimeout = 3 * time.Second   // Timeout for graceful shutdown
 )
 
 // Global variable for version
@@ -59,13 +59,13 @@ type Config struct {
 // Server is the main gRPC server implementation
 type Server struct {
 	pb.UnimplementedOblivionServiceServer
-	mu           sync.RWMutex   // Synchronizes access to server state
-	running      bool           // Indicates if Sing-Box is running
-	statusChange chan string    // Channel to broadcast status updates
-	dirPath      string         // Directory path of the executable
-	config       Config         // Configuration loaded from the file
-	sbProcess    *exec.Cmd      // Sing-Box process handler
-	logger       *Logger        // Logger for server messages
+	mu           sync.RWMutex // Synchronizes access to server state
+	running      bool         // Indicates if Sing-Box is running
+	statusChange chan string  // Channel to broadcast status updates
+	dirPath      string       // Directory path of the executable
+	config       Config       // Configuration loaded from the file
+	sbProcess    *exec.Cmd    // Sing-Box process handler
+	logger       *Logger      // Logger for server messages
 }
 
 // NewServer creates and initializes a new Server instance
@@ -317,7 +317,7 @@ func startGRPCServer(server *Server, logger *Logger) {
 		logger.fatal.Fatalf("Failed to listen: %v", err)
 	}
 
-	grpcServer := grpc.NewServer() // Create a new gRPC server
+	grpcServer := grpc.NewServer()                       // Create a new gRPC server
 	pb.RegisterOblivionServiceServer(grpcServer, server) // Register the server implementation
 
 	// Handle OS signals for graceful shutdown
