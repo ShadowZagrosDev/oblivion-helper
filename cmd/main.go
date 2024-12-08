@@ -50,10 +50,10 @@ func NewLogger() *Logger {
 	}
 }
 
-// Config represents the configuration for Sing-Box
+// Config represents the configuration for helper
 type Config struct {
-	SbConfig string `json:"sbConfig"` // Path to Sing-Box configuration file
-	SbBin    string `json:"sbBin"`    // Path to Sing-Box binary
+	SbConfig string `json:"sbConfig"` // Name of Sing-Box configuration file
+	SbBin    string `json:"sbBin"`    // Name of Sing-Box binary
 }
 
 // Server is the main gRPC server implementation
