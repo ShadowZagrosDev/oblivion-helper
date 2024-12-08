@@ -29,7 +29,7 @@ const (
 	serverAddress      = "127.0.0.1:50051"     // Localhost address for gRPC server
 	configFileName     = "config.obv"          // Name of the configuration file
 	statusChannelCap   = 100                   // Capacity of the status channel
-	gracefulShutdownTimeout = 5 * time.Second  // Timeout for graceful shutdown
+	gracefulShutdownTimeout = 3 * time.Second  // Timeout for graceful shutdown
 )
 
 // Global variable for version
@@ -91,7 +91,7 @@ func getExecutableDir() (string, error) {
 	return filepath.Dir(executable), nil
 }
 
-// loadConfig loads the Sing-Box configuration from a file
+// loadConfig loads the helper configuration from a file
 func (s *Server) loadConfig() error {
 	configPath := filepath.Join(s.dirPath, configFileName)
 
