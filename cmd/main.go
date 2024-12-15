@@ -29,7 +29,7 @@ const (
 	serverAddress           = "127.0.0.1:50051" // Localhost address for gRPC server
 	configFileName          = "config.obv"      // Name of the configuration file
 	statusChannelCap        = 100               // Capacity of the status channel
-	gracefulShutdownTimeout = 3 * time.Second   // Timeout for graceful shutdown
+	gracefulShutdownTimeout = 2 * time.Second   // Timeout for graceful shutdown
 )
 
 // Global variable for version
