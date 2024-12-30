@@ -1,6 +1,6 @@
-# Oblivion-Helper 🚀
+# Oblivion-Helper
 
-Oblivion-Helper is a robust process management tool designed to manage the Sing-Box core for the [Oblivion-Desktop](https://github.com/bepass-org/oblivion-desktop) application, providing seamless cross-platform support for Windows, macOS, and Linux.
+Oblivion-Helper is a high-performance utility designed for managing **Sing-Box** directly within the [Oblivion-Desktop](https://github.com/bepass-org/oblivion-desktop) application. It provides seamless cross-platform compatibility for Windows, macOS, and Linux.
 
 <br>
 <div align="center">
@@ -18,18 +18,22 @@ Oblivion-Helper is a robust process management tool designed to manage the Sing-
 </div>
 <br>
 
-## 🌟 Overview
 
-Oblivion-Helper is a lightweight, high-performance process management utility built with Go and gRPC. It provides a reliable interface for controlling the Sing-Box core across multiple operating systems, ensuring smooth and efficient core management for the Oblivion-Desktop application.
+## Overview
 
-## ✨ Features
+Oblivion-Helper is a lightweight yet powerful utility built with Go and gRPC. It directly integrates **Sing-Box**, allowing for seamless core functionality and flexible configuration. The application is distributed under the **GPL v3 License** to comply with the usage of Sing-Box.
 
-- **Cross-Platform Support**: Works seamlessly on Windows, macOS, and Linux
-- **gRPC-Powered**: Utilizes gRPC for robust, high-performance inter-process communication
-- **Secure Process Management**: Provides start, stop, and status streaming capabilities
-- **Configurable**: Easy configuration through a simple JSON configuration file
 
-## 🚀 Installation
+## Features
+
+- **Cross-Platform Compatibility**: Windows, macOS, and Linux
+- **gRPC Interface**: Robust, high-performance inter-process communication
+- **Direct Sing-Box Integration**: Embeds the Sing-Box library for enhanced performance
+- **Automated Ruleset Updates**: Download and update rulesets from remote URLs
+- **Configurable Options**: Easily configurable through JSON files
+
+
+## Installation
 
 ### Download Binaries
 
@@ -62,34 +66,47 @@ Download the latest release for your platform from the [Releases Page](https://g
 
 4. Build the project:
    ```bash
-   go build -o oblivion-helper ./cmd/main.go
+   go build -tags "with_gvisor" -ldflags "-X 'main.Version=<version>'" -o oblivion-helper ./cmd
    ```
 
-## 📝 Configuration
+## Configuration
 
-Create a `config.obv` file in the same directory as the Oblivion-Helper binary.
+### Sing-Box Configuration
+
+Create a `sbConfig.json` file in the same directory as the Oblivion-Helper binary. Example:
 
 ```json
 {
-    "sbConfig": "singbox-config.json",
-    "sbBin": "sing-box"
+    "log": { "level": "info" },
+    "inbounds": [...],
+    "outbounds": [...]
 }
 ```
 
-- `sbConfig`: Name of the Sing-Box configuration file
-- `sbBin`: Name of the Sing-Box binary
+- **`sbConfig.json`**: Configuration file for Sing-Box functionality.
 
-**Important**: 
-- The `singbox-config.json` file
-- The `sing-box` binary
-- The `oblivion-helper` binary
-- The `config.obv` file
 
-All these files must be in the **same directory** for the helper to function correctly.
+### Export Configuration (Optional)
 
-## 🔧 Usage
+Create an `sbExportList.json` file in the same directory to enable dynamic ruleset updates. Example:
 
-Run the helper with root privileges:
+```json
+{
+    "interval": 7,
+    "urls": {
+        "ruleset1.srs": "https://example.com/ruleset1.srs",
+        "ruleset2.srs": "https://example.com/ruleset2.srs"
+    }
+}
+```
+
+- `interval`: Update interval in days.
+- `urls`: Rulesets to download and manage.
+
+
+## Usage
+
+Run the helper with administrative/root privileges:
 ```bash
 sudo ./oblivion-helper
 ```
@@ -100,27 +117,35 @@ Command-line options:
   ./oblivion-helper version
   ```
 
+
 ### gRPC Client Interaction
 
 The helper exposes a gRPC service with these methods:
-- `Start()`: Initiate the Sing-Box process
-- `Stop()`: Terminate the Sing-Box process
-- `StreamStatus()`: Receive real-time status updates
-- `Exit()`: Gracefully exit the helper
+- `Start()`: Starts the Sing-Box process using the provided configuration.
+- `Stop()`: Terminates the currently running Sing-Box process.
+- `StreamStatus()`: Streams real-time status updates to the client.
+- `Exit()`: Shuts down the helper gracefully.
 
-## 🤝 Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+## License
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+This software is distributed under the **GPL v3 License**. See the [LICENSE](LICENSE) file for details. It integrates **Sing-Box**, which is also licensed under GPL v3.
 
-## 📄 License
 
-Distributed under the MIT License. See the [LICENSE](LICENSE) for more information.
+## Acknowledgments
+
+Oblivion-Helper utilizes several open-source libraries and tools to deliver its functionality. We extend our gratitude to the developers and maintainers of these projects:
+
+- **[Sing-Box](https://github.com/SagerNet/sing-box)**: A comprehensive library for network proxy functionalities, directly embedded in Oblivion-Helper.
+- **[atomicgo/isadmin](https://github.com/atomicgo/isadmin)**: For providing a simple way to check administrative privileges in Go.
+- **[fatih/color](https://github.com/fatih/color)**: For enabling colorful terminal outputs, making logs more readable.
+- **[gRPC](https://grpc.io/)**: A high-performance framework for building RPC communication between processes.
+  - **Submodules**:
+    - `google.golang.org/grpc/codes`: For handling gRPC error codes.
+    - `google.golang.org/grpc/status`: For working with gRPC status messages.
+
+We appreciate the open-source community for providing these invaluable tools.
+
 
 ---
 
