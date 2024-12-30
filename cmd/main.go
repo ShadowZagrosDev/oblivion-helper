@@ -138,6 +138,8 @@ func (s *Server) loadSingBoxConfig() (*option.Options, error) {
 func (s *Server) loadExportConfig() error {
 	configPath := filepath.Join(s.dirPath, exportListFileName)
 
+	s.exportConfig.URLs = nil
+
 	_, err := os.Stat(configPath)
 	if os.IsNotExist(err) {
 		s.logger.warn.Printf("Export config not found at %s, skipping...", configPath)
