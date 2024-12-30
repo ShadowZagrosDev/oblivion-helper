@@ -81,10 +81,14 @@ jobs:
           else
             GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -tags "with_gvisor" -ldflags "-X 'main.Version=${{ env.TAG_NAME }}'" -o oblivion-helper/oblivion-helper ./cmd
           fi
+      
+      - name: Copy LICENSE file
+        run: |
+          cp LICENSE oblivion-helper/LICENSE
 
       - name: Archive binaries
         run: |
-          zip oblivion-helper-${{ matrix.goos }}-${{ matrix.goarch }}.zip oblivion-helper/oblivion*
+          zip oblivion-helper-${{ matrix.goos }}-${{ matrix.goarch }}.zip oblivion-helper/oblivion* LICENSE
 
       - name: Upload binaries to Artifacts
         uses: actions/upload-artifact@v4
