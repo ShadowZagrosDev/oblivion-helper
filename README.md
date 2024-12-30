@@ -131,7 +131,7 @@ The helper exposes a gRPC service with these methods:
 
 This software is distributed under the **GNU General Public License version 3 (GPLv3)**. This is required because Oblivion-Helper directly embeds the **Sing-Box** library, which is also licensed under GPLv3.
 
-You can find the full text of the GPLv3 in the [**LICENSE**](link-to-your-github-repo/blob/main/LICENSE) file in the source code repository. *Because of this license, you have the freedom to use, modify, and distribute this software, including any modifications you make, under the terms of GPLv3.*
+You can find the full text of the GPLv3 in the [**LICENSE**](LICENSE) file in the source code repository. *Because of this license, you have the freedom to use, modify, and distribute this software, including any modifications you make, under the terms of GPLv3.*
 
 [**View Source Code**](https://github.com/ShadowZagrosDev/oblivion-helper)
 
